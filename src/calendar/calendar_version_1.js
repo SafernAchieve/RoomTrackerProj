@@ -4,7 +4,7 @@ import {
   DayPilotCalendar,
   DayPilotNavigator,
 } from "daypilot-pro-react";
-import { getEvents, getBookings, getWebs,getBooking } from "./event_loader";
+import { getEvents, getBookings, getWebs } from "./event_loader";
 import resources_obj from "./resources";
 
 import "./Calendar.css";
@@ -14,79 +14,36 @@ const Calendar = () => {
   const [startDate, setStartDate] = useState("2024-12-16");
   const [endDate, setEndDate] = useState("2024-12-25");
   const [loading, setLoading] = useState(true);
-    const [event, setEvent] = useState([]);
-  // const [selectedEvents, setSelectedEvents] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [selectedEvents, setSelectedEvents] = useState([]);
   const [selectedName, setSelectedName] = useState("All");
   const [zoomLevel, setZoomLevel] = useState(1);
   const [startTime, setStartTime] = useState("14");
   const [endTime, setEndTime] = useState("19");
   const [bookingsData, setBookingsData] = useState();
   const [webs, setWebs] = useState();
-
-  const allSpaces = webs?.spaces ?? [];
-  console.log("allSpaces", allSpaces);
-
-  const allBookings = bookingsData?.bookings ?? [];
-
-  const ready = allSpaces.length > 0 && allBookings.length > 0;
-
-  const events = !ready ? [] : allBookings?.map((booking) => {
-    if (allSpaces.length === 0) {
-      return;
-    }
-    const matchingSpace = allSpaces?.find((space) => {
+  console.log("bookingsData", bookingsData);
+  console.log("webs", webs);
+  const locatedBookings = bookingsData?.bookings.map((booking) => {
+    const space = webs?.spaces.find((space) => {
       const spaceId = booking.spaces[0];
       return space.id === spaceId;
     });
-
-    if (!matchingSpace) {
-      throw new Error(`No matching space found for booking ID: ${booking.id}`);
-    }
-
     return {
-      start: new DayPilot.Date(booking.start),
-      end: new DayPilot.Date(booking.end),
-      text: "",
-      id: booking.name,
-      resource: matchingSpace.id,
+      booking,
+      space,
     };
   });
-  console.log("events", events);
-
+  console.log("locatedBookings", locatedBookings);
   useEffect(() => {
     const loadBookings = async () => {
       const bookingsData = await getBookings();
       setBookingsData(bookingsData);
-      console.log("bookingsData", bookingsData);
       const webs = await getWebs();
       setWebs(webs);
-      console.log("webs", webs);
     };
     loadBookings();
   }, []);
-
-
-
-const loadBookings = async () => {
-  const bookingsData = await getBookings();
-
-  const e = bookingsData.bookings.map((booking) => ({
-start: new DayPilot.Date(booking.start),
-end: new DayPilot.Date(booking.end),
-
-  }));
-  setEvent(e);
-}
-
-useEffect(() => {
-  loadBookings();
-},[]);
-
-
-
-
-
-
 
   const [config, setConfig] = useState({
     locale: "en-us",
@@ -98,26 +55,59 @@ useEffect(() => {
     crosshairType: "Header",
     showCurrentTime: false,
 
-   
+    businessBeginsHour: startTime,
+    businessEndsHour: endTime,
+    showNonBusiness: false,
 
     // eventArrangement: "Cascade",
     allowEventOverlap: true,
     timeRangeSelectedHandling: "Enabled",
     onTimeRangeSelected: async (args) => {
-      console.log("not supported");
-   
+      const modal = await DayPilot.Modal.prompt(
+        "Create a new event:",
+        "Event 1"
+      );
+      const dp = args.control;
+      dp.clearSelection();
+      if (modal.canceled) {
+        return;
+      }
+
+      const newEvent = {
+        id: DayPilot.guid(),
+        start: args.start,
+        end: args.end,
+        text: modal.result,
+        resource: args.resource,
+      };
+      setEvents((prevEvents) => [...prevEvents, newEvent]);
     },
     eventDeleteHandling: "Disabled",
     eventMoveHandling: "Update",
 
     onEventMoved: (args) => {
-      console.error("oneventMoved not supported");
- 
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === args.e.id()
+            ? {
+                ...event,
+                start: args.newStart,
+                end: args.newEnd,
+                resource: args.newResource,
+              }
+            : event
+        )
+      );
     },
     eventResizeHandling: "Update",
     onEventResized: (args) => {
-      console.error("onEventResized not supported");
-  
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === args.e.id()
+            ? { ...event, start: args.newStart, end: args.newEnd }
+            : event
+        )
+      );
     },
 
     eventClickHandling: "Disabled",
@@ -126,38 +116,35 @@ useEffect(() => {
 
   const calendarRef = useRef(null);
 
+;
 
+ 
 
+  const loadEvents = async () => {
+    const events = await getEvents(startDate, endDate);
+    console.log(
+      events
+        .map((e) => e.resources)
+        .filter((value, index, self) => self.indexOf(value) === index)
+    );
+    const e = events.map((event) => ({
+      start: new DayPilot.Date(event.start),
+      end: new DayPilot.Date(event.end),
 
-
-
-
-
-
-
-
-  // const loadEvents = async () => {
-  //   const events = await getEvents(startDate, endDate);
-  //   console.log(
-  //     events
-  //       .map((e) => e.resources)
-  //       .filter((value, index, self) => self.indexOf(value) === index)
-  //   );
-  //   const e = events.map((event) => ({
-  //     start: new DayPilot.Date(event.start),
-  //     end: new DayPilot.Date(event.end),
-
-  //     text: event.summary,
-  //     id: event.uid,
-  //     resource: event.resources,
-  //   }));
-  //   setEvents(e);
-  //   setSelectedEvents(
-  //     e)
-  // };
+      text: event.summary,
+      id: event.uid,
+      resource: event.resources,
+    }));
+    setEvents(e);
+    setSelectedEvents(e);
+  };
 
   useEffect(() => {
     daysResources();
+  }, []);
+
+  useEffect(() => {
+    loadEvents();
   }, []);
 
   const initializeResources = (
@@ -166,6 +153,7 @@ useEffect(() => {
     location = "All",
     name = "All"
   ) => {
+    console.log();
     const resources = resources_obj.map((resource) => ({
       ...resource,
       start: date,
@@ -199,12 +187,11 @@ useEffect(() => {
       selectedPurpose,
       selectedLocation
     );
-
+ 
+    loadEvents();
     daysResources();
 
-   
   };
-
 
   const daysResources = () => {
     const columns = [];
@@ -215,76 +202,7 @@ useEffect(() => {
       Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
     // Get all events that fall within the date range
-    const allEvent = event; /*.filter((event) => {
-  
-    });*/
-
-    for (let i = 0; i < daysDifference; i++) {
-      const currentDay = new Date(start);
-      currentDay.setDate(start.getDate() + i);
-      const dayResources = initializeResources(
-        currentDay,
-        selectedPurpose,
-        selectedLocation,
-        selectedName
-      );
-
-      columns.push({
-        id: i,
-        name: currentDay.toLocaleDateString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }),
-        children: dayResources,
-      });
-    }
-
-    const columnWidth =
-      selectedName !== "All" &&
-      selectedPurpose === "All" &&
-      selectedLocation === "All"
-        ? 210
-        : 120;
-
-    setConfig({
-      ...config,
-      columnWidthSpec: "Fixed",
-      columnWidth: columnWidth,
-      columns,
-      headerLevels: 2,
-      events: allEvent,
-    });
-  };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-  const daysResourcess = () => {
-    const columns = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59);
-    const daysDifference =
-      Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-
-    // Get all events that fall within the date range
-    const allEvents = events; /*.filter((event) => {
-  
-    });*/
+    const allEvents = events;
 
     for (let i = 0; i < daysDifference; i++) {
       const currentDay = new Date(start);
@@ -324,14 +242,6 @@ useEffect(() => {
       events: allEvents,
     });
   };
-
-
-
-
-
-
-
-
   const endDateTillMidnight = new Date(endDate);
   endDateTillMidnight.setHours(23, 59, 59);
 
@@ -424,7 +334,7 @@ useEffect(() => {
             <input
               type="time"
               value={startTime}
-              //onChange={handleStartTimeChange} // Corrected onChange handler
+              onChange={handleStartTimeChange} // Corrected onChange handler
             />
           </label>
           <label>
@@ -444,7 +354,7 @@ useEffect(() => {
         <DayPilotCalendar
           {...config}
           ref={calendarRef}
-          events={events}
+          events={selectedEvents}
           startDate={startDate}
           endDate={endDateTillMidnight}
           idField="id"
