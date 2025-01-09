@@ -55,9 +55,7 @@ const Calendar = () => {
     crosshairType: "Header",
     showCurrentTime: false,
 
-    businessBeginsHour: startTime,
-    businessEndsHour: endTime,
-    showNonBusiness: false,
+
 
     // eventArrangement: "Cascade",
     allowEventOverlap: true,
@@ -119,7 +117,7 @@ const Calendar = () => {
 ;
 
  
-const loadEvent = async () => {
+const loadEvents = async () => {
   try {
       const bookingsData = await getBookings(startDate, endDate);
       const events = bookingsData.bookings.map((booking) => ({
@@ -141,38 +139,15 @@ useEffect(() => {
   loadEvents();
 }, [startDate, endDate]);
 
-
-
-
-
-
-
-  const loadEvents = async () => {
-    const events = await getEvents(startDate, endDate);
-    console.log(
-      events
-        .map((e) => e.resources)
-        .filter((value, index, self) => self.indexOf(value) === index)
-    );
-    const e = events.map((event) => ({
-      start: new DayPilot.Date(event.start),
-      end: new DayPilot.Date(event.end),
-
-      text: event.summary,
-      id: event.uid,
-      resource: event.resources,
-    }));
-    setEvents(e);
-    setSelectedEvents(e);
-  };
+// Other necessary parts of your Calendar component...
 
   useEffect(() => {
     daysResources();
   }, []);
 
-  useEffect(() => {
+/*   useEffect(() => {
     loadEvents();
-  }, []);
+  }, []); */
 
   const initializeResources = (
     date,
@@ -361,7 +336,7 @@ useEffect(() => {
             <input
               type="time"
               value={startTime}
-              //onChange={handleStartTimeChange} // Corrected onChange handler
+          
             />
           </label>
           <label>

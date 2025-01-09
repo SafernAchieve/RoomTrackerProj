@@ -119,6 +119,33 @@ const Calendar = () => {
 ;
 
  
+const loadEvent = async () => {
+  try {
+      const bookingsData = await getBookings(startDate, endDate);
+      const events = bookingsData.bookings.map((booking) => ({
+          start: new DayPilot.Date(booking.start),
+          end: new DayPilot.Date(booking.end),
+          text: booking.title || "Untitled Event", // Use a default title if none is provided
+          id: booking.id,
+          resource: booking.spaces[0], // Assuming the first space ID is the resource
+      }));
+      setEvents(events);
+      setSelectedEvents(events);
+  } catch (error) {
+      console.error('Error loading events:', error);
+  }
+};
+
+// Ensure to call loadEvents in the appropriate useEffect hooks
+useEffect(() => {
+  loadEvents();
+}, [startDate, endDate]);
+
+
+
+
+
+
 
   const loadEvents = async () => {
     const events = await getEvents(startDate, endDate);

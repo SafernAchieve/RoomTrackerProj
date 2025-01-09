@@ -18,14 +18,23 @@ export const getEvents = async (start, end) => {
    // console.log('getEvents response.data:', response.data)
     return response.data;
 };
-
 export const getBookings = async (start, end) => {
     const startDate = new DayPilot.Date(start);
     const endDate = new DayPilot.Date(end);
-    const response = await axios.get(`${BOOKINGS_URL}?start=${startDate}&end=${endDate}`)
-    console.log('getBookings response.data:', response.data)
-    return response.data;
-}
+    try {
+        const response = await axios.get(BOOKINGS_URL, {
+            params: {
+                start: startDate.toString(),
+                end: endDate.toString(),
+            },
+        });
+        console.log('getBookings response.data:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+        throw error;
+    }
+};
 
 export const getBooking = async () => {
     const response = await axios.get(BOOKINGS_URL)
